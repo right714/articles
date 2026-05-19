@@ -1,5 +1,13 @@
 {
-  "cSpell.words": ["zenn"],
+  "cSpell.words": [
+    "zenn",
+    "textlint",
+    "hakoreco",
+    "keishikimeishi",
+    "fukushi",
+    "hojodoushi",
+    "sudachi"
+  ],
   "[json][jsonc]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.formatOnSave": true
