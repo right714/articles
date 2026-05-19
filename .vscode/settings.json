@@ -1,0 +1,7 @@
+{
+  "cSpell.words": ["zenn"],
+  "[json][jsonc]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true
+  }
+}
