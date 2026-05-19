@@ -6,8 +6,8 @@
 
 ## Zenn CLI
 
-[How to use](https://zenn.dev/zenn/articles/zenn-cli-guide)
-[What is slug](https://zenn.dev/zenn/articles/what-is-slug)
+- [How to use](https://zenn.dev/zenn/articles/zenn-cli-guide)
+- [What is slug](https://zenn.dev/zenn/articles/what-is-slug)
 
 ## Update
 
