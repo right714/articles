@@ -3,7 +3,9 @@
   "author": "right714",
   "scripts": {
     "new": "zenn new:article",
-    "preview": "zenn preview"
+    "preview": "zenn preview",
+    "textlint": "textlint 'articles/**/*.md'",
+    "textlint:fix": "npm run textlint -- --fix"
   },
   "dependencies": {
     "zenn-cli": "^0.4.7"

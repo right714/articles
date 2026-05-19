@@ -1,5 +1,5 @@
 {
-  "cSpell.words": ["zenn"],
+  "cSpell.words": ["zenn", "textlint"],
   "[json][jsonc]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.formatOnSave": true

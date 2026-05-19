@@ -14,3 +14,7 @@
 ```bash
 npm install zenn-cli --min-release-age=7
 ```
+
+## textlint
+
+- [Preset rules](https://github.com/textlint-ja/textlint-rule-preset-ja-technical-writing)
