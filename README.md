@@ -8,6 +8,7 @@
 
 - [How to use](https://zenn.dev/zenn/articles/zenn-cli-guide)
 - [What is slug](https://zenn.dev/zenn/articles/what-is-slug)
+- [Zenn markdown記法一覧](https://zenn.dev/zenn/articles/markdown-guide)
 
 ## Update
 
