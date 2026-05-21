@@ -18,6 +18,7 @@ emoji: "🐈" # アイキャッチとして使われる絵文字
 type: "tech" # tech → 技術記事、idea → アイデア記事
 topics: [] # タグ
 published: true # true → 公開、false → 非公開
+publication_name: hakoreco
 ---
 ```
 
@@ -28,6 +29,7 @@ published: true # true → 公開、false → 非公開
   - **idea**: キャリアやマネジメントなど技術に直接関係しないトピックや、技術に関する抽象的な考え方・情報のまとめ記事はIdeaを選ぶ
 - **topics**: 記事に設定されるタグ。`["A", "B", "C"]`のように配列の形で表記される。記事の内容に則したタグが設定されているか確認すること
 - **published**: 公開設定。基本的には`true`で良い
+- **publication_name**: ZennのPublicationに投稿する際に設定する。会社に属する記事を書く場合必要となる。著者は`hakoreco`に属している
 
 #### 公式ガイドライン
 
