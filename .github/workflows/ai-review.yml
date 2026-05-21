@@ -32,7 +32,14 @@ jobs:
 
       - name: Normalize files output
         id: normalize
-        run: echo "files=${{ steps.changed-files.outputs.all_changed_files_json || '[]' }}" >> $GITHUB_OUTPUT
+        env:
+          FILES: ${{ steps.changed-files.outputs.all_changed_files_json }}
+        run: |
+          if [ -z "$FILES" ] || [ "$FILES" = "[]" ]; then
+            echo 'files=["__no_files__"]' >> $GITHUB_OUTPUT
+          else
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+          fi
 
   review:
     needs: get-files
