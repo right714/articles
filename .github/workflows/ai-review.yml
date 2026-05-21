@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: read
     outputs:
-      files: ${{ steps.changed-files.outputs.all_changed_files_json }}
+      files: ${{ steps.normalize.outputs.files }}
       any_changed: ${{ steps.changed-files.outputs.any_changed }}
     steps:
       - name: Checkout
@@ -29,6 +29,10 @@ jobs:
             articles/**
             books/**
           json: true
+
+      - name: Normalize files output
+        id: normalize
+        run: echo "files=${{ steps.changed-files.outputs.all_changed_files_json || '[]' }}" >> $GITHUB_OUTPUT
 
   review:
     needs: get-files
