@@ -128,6 +128,9 @@ jobs:
             cat /tmp/textlint-result.txt
           } > /tmp/prompt.md
 
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
       - name: AI Inference
         id: inference
         uses: actions/ai-inference@v2
@@ -138,7 +141,7 @@ jobs:
           system-prompt-file: ".github/review-prompt.md"
           prompt-file: "/tmp/prompt.md"
         env:
-          GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
 
       - name: Comment on PR
         env:
