@@ -29,6 +29,7 @@ jobs:
       files: ${{ steps.output.outputs.files }}
       any_changed: ${{ steps.output.outputs.any_changed }}
       pr_number: ${{ steps.output.outputs.pr_number }}
+      head_sha: ${{ steps.output.outputs.head_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,52 +38,58 @@ jobs:
 
       - name: Get changed files (PR trigger)
         if: github.event_name == 'pull_request'
-        id: changed-files
-        uses: tj-actions/changed-files@v47
-        with:
-          files: |
-            articles/*.md
-            books/**/*.md
-          json: true
+        id: pr-changed-files
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" \
+            | grep -E '^(articles|books)/.*\.md$' \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
 
       - name: Get changed files (Comment trigger)
         if: github.event_name == 'issue_comment'
-        id: pr-files
+        id: comment-changed-files
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
         run: |
-          PR_NUMBER=${{ github.event.issue.number }}
-          FILES=$(gh pr view "$PR_NUMBER" --json files -q '.files[].path' \
-            | grep -E '^(articles|books).*\.md$' \
-            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          PR_DATA=$(gh pr view "$PR_NUMBER" --json headRefOid,files)
+          HEAD_SHA=$(echo "$PR_DATA" | jq -r '.headRefOid')
+          FILES=$(echo "$PR_DATA" | jq -c '[.files[].path | select(test("^(articles|books)/.*\\.md$"))]')
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
       - name: Set output
         id: output
         env:
-          PR_FILES_PR: ${{ steps.changed-files.outputs.all_changed_files_json }}
-          PR_FILES_ANY: ${{ steps.changed-files.outputs.any_changed }}
-          PR_FILES_COMMENT: ${{ steps.pr-files.outputs.files }}
+          EVENT_NAME: ${{ github.event_name }}
+          PR_FILES_PR: ${{ steps.pr-changed-files.outputs.files }}
+          PR_FILES_COMMENT: ${{ steps.comment-changed-files.outputs.files }}
           PR_NUMBER_PR: ${{ github.event.pull_request.number }}
           PR_NUMBER_COMMENT: ${{ github.event.issue.number }}
-          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA_PR: ${{ github.event.pull_request.head.sha }}
+          HEAD_SHA_COMMENT: ${{ steps.comment-changed-files.outputs.head_sha }}
         run: |
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             FILES="$PR_FILES_PR"
-            ANY="$PR_FILES_ANY"
-            PR="$PR_NUMBER_PR"
+            PR_NUMBER="$PR_NUMBER_PR"
+            HEAD_SHA="$HEAD_SHA_PR"
           else
             FILES="$PR_FILES_COMMENT"
-            PR="$PR_NUMBER_COMMENT"
-            if [ -z "$FILES" ] || [ "$FILES" = "[]" ] || [ "$FILES" = "null" ]; then
-              ANY="false"
-            else
-              ANY="true"
-            fi
+            PR_NUMBER="$PR_NUMBER_COMMENT"
+            HEAD_SHA="$HEAD_SHA_COMMENT"
           fi
-          echo "files=$FILES" >> $GITHUB_OUTPUT
-          echo "any_changed=$ANY" >> $GITHUB_OUTPUT
-          echo "pr_number=$PR" >> $GITHUB_OUTPUT
+          if [ -z "$FILES" ] || [ "$FILES" = "[]" ] || [ "$FILES" = "null" ]; then
+            echo 'files=["__no_files__"]' >> $GITHUB_OUTPUT
+            echo "any_changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "any_changed=true" >> $GITHUB_OUTPUT
+          fi
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
 
   review:
     needs: prepare
@@ -99,6 +106,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.prepare.outputs.head_sha }}
           fetch-depth: 0
 
       - name: Install dependencies
