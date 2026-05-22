@@ -59,14 +59,21 @@ jobs:
 
       - name: Set output
         id: output
+        env:
+          PR_FILES_PR: ${{ steps.changed-files.outputs.all_changed_files_json }}
+          PR_FILES_ANY: ${{ steps.changed-files.outputs.any_changed }}
+          PR_FILES_COMMENT: ${{ steps.pr-files.outputs.files }}
+          PR_NUMBER_PR: ${{ github.event.pull_request.number }}
+          PR_NUMBER_COMMENT: ${{ github.event.issue.number }}
+          EVENT_NAME: ${{ github.event_name }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            FILES='${{ steps.changed-files.outputs.all_changed_files }}'
-            ANY='${{ steps.changed-files.outputs.any_changed }}'
-            PR='${{ github.event.pull_request.number }}'
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            FILES="$PR_FILES_PR"
+            ANY="$PR_FILES_ANY"
+            PR="$PR_NUMBER_PR"
           else
-            FILES='${{ steps.pr-files.outputs.files }}'
-            PR='${{ github.event.issue.number }}'
+            FILES="$PR_FILES_COMMENT"
+            PR="$PR_NUMBER_COMMENT"
             if [ -z "$FILES" ] || [ "$FILES" = "[]" ] || [ "$FILES" = "null" ]; then
               ANY="false"
             else
