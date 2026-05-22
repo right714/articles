@@ -1,59 +1,96 @@
 name: "AI Review"
+
 on:
   pull_request:
     types:
       - opened
+      - synchronize
     paths:
       - articles/*.md
       - books/**/*.md
+  issue_comment:
+    types:
+      - created
 
 jobs:
-  get-files:
+  prepare:
+    if: |
+      github.event_name == 'pull_request' ||
+      (
+        github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request.url != '' &&
+        contains(github.event.comment.body, '/ai-review')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     outputs:
-      files: ${{ steps.normalize.outputs.files }}
-      any_changed: ${{ steps.changed-files.outputs.any_changed }}
+      files: ${{ steps.output.outputs.files }}
+      any_changed: ${{ steps.output.outputs.any_changed }}
+      pr_number: ${{ steps.output.outputs.pr_number }}
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Get changed files
+      - name: Get changed files (PR trigger)
+        if: github.event_name == 'pull_request'
         id: changed-files
-        uses: tj-actions/changed-files@9426d40962ed5378910ee2e21d5f8c6fcbf2dd96 # v47.0.6
+        uses: tj-actions/changed-files@v47
         with:
           files: |
-            articles/**
-            books/**
+            articles/*.md
+            books/**/*.md
           json: true
 
-      - name: Normalize files output
-        id: normalize
+      - name: Get changed files (Comment trigger)
+        if: github.event_name == 'issue_comment'
+        id: pr-files
         env:
-          FILES: ${{ steps.changed-files.outputs.all_changed_files_json }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          if [ -z "$FILES" ] || [ "$FILES" = "[]" ]; then
-            echo 'files=["__no_files__"]' >> $GITHUB_OUTPUT
+          PR_NUMBER=${{ github.event.issue.number }}
+          FILES=$(gh pr view "$PR_NUMBER" --json files -q '.files[].path' \
+            | grep -E '^(articles|books).*\.md$' \
+            | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+
+      - name: Set output
+        id: output
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            FILES='${{ steps.changed-files.outputs.all_changed_files }}'
+            ANY='${{ steps.changed-files.outputs.any_changed }}'
+            PR='${{ github.event.pull_request.number }}'
           else
-            echo "files=$FILES" >> $GITHUB_OUTPUT
+            FILES='${{ steps.pr-files.outputs.files }}'
+            PR='${{ github.event.issue.number }}'
+            if [ -z "$FILES" ] || [ "$FILES" = "[]" ] || [ "$FILES" = "null" ]; then
+              ANY="false"
+            else
+              ANY="true"
+            fi
           fi
+          echo "files=$FILES" >> $GITHUB_OUTPUT
+          echo "any_changed=$ANY" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR" >> $GITHUB_OUTPUT
 
   review:
-    needs: get-files
-    if: needs.get-files.outputs.any_changed == 'true'
+    needs: prepare
+    if: needs.prepare.outputs.any_changed == 'true'
     strategy:
+      fail-fast: false
       matrix:
-        file: ${{ fromJson(needs.get-files.outputs.files) }}
+        file: ${{ fromJson(needs.prepare.outputs.files) }}
     permissions:
       contents: read
       pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -76,12 +113,9 @@ jobs:
             cat /tmp/textlint-result.txt
           } > /tmp/prompt.md
 
-      - name: Install Copilot CLI
-        run: npm install -g @github/copilot
-
-      - name: Inference
+      - name: AI Inference
         id: inference
-        uses: actions/ai-inference@17ff458cb182449bbb2e43701fcd98f6af8f6570 # v2.1.0
+        uses: actions/ai-inference@v2
         with:
           provider: copilot
           model: gpt-4.1
@@ -89,15 +123,16 @@ jobs:
           system-prompt-file: ".github/review-prompt.md"
           prompt-file: "/tmp/prompt.md"
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
 
-      - name: Comment on PullRequest
+      - name: Comment on PR
         env:
           RESPONSE: ${{ steps.inference.outputs.response }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           {
             echo "## Review: \`${{ matrix.file }}\`"
+            echo ""
             echo "$RESPONSE"
           } > /tmp/comment
-          gh pr comment ${{ github.event.pull_request.number }} -F /tmp/comment
+          gh pr comment "${{ needs.prepare.outputs.pr_number }}" -F /tmp/comment
