@@ -1,0 +1,53 @@
+name: AI Review
+run-name: AI-inference review for articles
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - articles/**/*.md
+      - books/**/*.md
+
+jobs:
+  review:
+    name: Review
+    permissions:
+      models: read
+      contents: read
+      pull-requests: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Get changed files
+        id: changed-files
+        uses: step-security/changed-files@v47
+        with:
+          files: |
+            articles/**/*.md
+            books/**/*.md
+        
+      - name: Inference
+        if: steps.changed-files.outputs.any_changed == 'true' && steps.changed-files.outputs.all_changed_files_count == '1'
+        id: inference
+        uses: actions/ai-inference@v2
+        with:
+          system-prompt-file: .github/prompt/review.md
+          prompt-file: ${{ steps.changed-files.outputs.all_changed_files }}
+          max-tokens: 2000
+
+      - name: Comment on PR
+        if: steps.changed-files.outputs.any_changed == 'true' && steps.changed-files.outputs.all_changed_files_count == '1' && steps.inference.outputs.result != ''
+        env:
+          RESPONSE: ${{ steps.inference.outputs.result }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "${{ env.RESPONSE }}" > comment.txt
+          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt
+          echo "Commented on PR #${{ github.event.pull_request.number }} with response: ${{ env.RESPONSE }}"

@@ -1,0 +1,5 @@
+pre-commit:
+  commands:
+    textlint:
+      glob: "{articles,books}/**/*.md"
+      run: npx textlint {staged_files}
