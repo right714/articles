@@ -43,9 +43,9 @@ jobs:
           max-tokens: 2000
 
       - name: Comment on PR
-        if: steps.changed-files.outputs.any_changed == 'true' && steps.changed-files.outputs.all_changed_files_count == '1' && steps.inference.outputs.result != ''
+        if: steps.changed-files.outputs.any_changed == 'true' && steps.changed-files.outputs.all_changed_files_count == '1' && steps.inference.outputs.response != ''
         env:
-          RESPONSE: ${{ steps.inference.outputs.result }}
+          RESPONSE: ${{ steps.inference.outputs.response }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           echo "${{ env.RESPONSE }}" > comment.txt
