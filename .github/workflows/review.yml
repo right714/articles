@@ -45,9 +45,6 @@ jobs:
       - name: Comment on PR
         if: steps.changed-files.outputs.any_changed == 'true' && steps.changed-files.outputs.all_changed_files_count == '1' && steps.inference.outputs.response != ''
         env:
-          RESPONSE: ${{ steps.inference.outputs.response }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "${{ env.RESPONSE }}" > comment.txt
-          gh pr comment ${{ github.event.pull_request.number }} --body-file comment.txt
-          echo "Commented on PR #${{ github.event.pull_request.number }} with response: ${{ env.RESPONSE }}"
+          gh pr comment ${{ github.event.pull_request.number }} --body-file ${{ steps.inference.outputs.response-file }}
